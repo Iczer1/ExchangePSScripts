@@ -1,16 +1,11 @@
 <#
 .SYNOPSIS
-Returns a recursive list of distribution group members along with an two extra properties detailing the SourceGroup name and the $N
-.DESCRIPTION
-
+Returns a recursive list of distribution group members along with an two extra properties detailing the SourceGroup name and an array of the nested groups
 .PARAMETER identity
-
+Name of the group to return the recursive membership of
 .PARAMETER MailObjectsOnly
-
+Will return only group members that have a filled in PrimarySMTPAddress
 .EXAMPLE
-
-.EXAMPLE
-
 #>
 Function Get-DistributionGroupMemberRecursive {
 
