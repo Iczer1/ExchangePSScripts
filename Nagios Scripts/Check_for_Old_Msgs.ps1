@@ -54,7 +54,7 @@ IF ($WarningAgeinMins -gt $CriticalAgeinMins) {
 If ((Get-Command Get-Mailbox -ErrorAction SilentlyContinue -Verbose:$false) -ne $Null) {Write-Verbose "Exchange PSSnapin is loaded, Proceeding with script"}
 Else {
     Try {
-        $CAS = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri "http://$Server.ds.susq.com/PowerShell/" -Authentication Kerberos -Name EXCH -ErrorAction Stop
+        $CAS = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri "http://$Server/PowerShell/" -Authentication Kerberos -Name EXCH -ErrorAction Stop
         Import-PSSession $CAS -allowclobber -ErrorAction Stop -DisableNameChecking -WarningAction SilentlyContinue | Out-Null 3> $null
     }
     Catch {
