@@ -17,15 +17,15 @@
 .PARAMETER CriticalAgeinMins 
     The critical Age in minutes 
 .EXAMPLE
-    PS C:\> .Check_TransportQueue -Server ECH201601 -WarningAgeinMins 60 -CriticalAgeinMins 1440
+    PS C:\> .Check_TransportQueue -Server XCHHTBAL500 -WarningAgeinMins 60 -CriticalAgeinMins 1440
     
     Description
     -----------
-    For transport service called ECH201601, check any non ShadowRedundancy queue in a retry state with a message count greater than 1 containing any messages in a retry state with a DateReceived older than 60 minutes from the run time of the script
+    For transport service called XCHBAL500, check any non ShadowRedundancy queue in a retry state with a message count greater than 1 containing any messages in a retry state with a DateReceived older than 60 minutes from the run time of the script
 .NOTES
     AUTHOR: John Mello
-    CREATED : 08/23/2017 
-    CREATED BECAUSE: Needed a way to alert on old messages in the queues after we decommission Spotlight on Messaging
+    CREATED : 08/23/2017
+    CREATED BECAUSE: Needed a way to alert on old messages in the queues
     UPDATES :
         2017-10-16 : John Mello
             Switched from checking the queues on each server for a retry and then getting the messages from those queues to directly using the get-message command to get messages in a retry state.
@@ -47,7 +47,7 @@ IF ($WarningAgeinMins -gt $CriticalAgeinMins) {
     Write-Warning "WarningAgeinMins ($($WarningAgeinMins)) is greater than the CriticalAgeinMins ($($CriticalAgeinMins))"
     Write-Warning "Setting CriticalAgeinMins to the same Value as WarningAgeinMins" 
     $CriticalAgeinMins = $WarningAgeinMins
-}
+}#If
 
 #region Dependencies
 #Load Exchange Cmdlets via a PSSsession
@@ -56,30 +56,30 @@ Else {
     Try {
         $CAS = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri "http://$Server/PowerShell/" -Authentication Kerberos -Name EXCH -ErrorAction Stop
         Import-PSSession $CAS -allowclobber -ErrorAction Stop -DisableNameChecking -WarningAction SilentlyContinue | Out-Null 3> $null
-    }
+    }#Try
     Catch {
         Get-PSSession -Name EXCH -ErrorAction SilentlyContinue | Remove-PSSession
         Write-host "Can't load Exchange PSSession"
         $_.Exception.message
         exit 3
-    }
-}
+    }#Catch
+}#else
 #endregion
 $CurrentDate = Get-date
-$WarningDate = $CurrentDate.addminutes( - $WarningAgeinMins)
-$CriticalDate = $CurrentDate.addminutes( - $CriticalAgeinMins)
+$WarningDate = $CurrentDate.addminutes(-$WarningAgeinMins)
+$CriticalDate = $CurrentDate.addminutes(-$CriticalAgeinMins)
 
 Try {
     [array]$OldMSGCheck = Get-Message -Server $Server -Filter {Status -eq 'Retry'} -ResultSize Unlimited |
         Where-object DateReceived -le $WarningDate
-}
+}#Try
 Catch {
     Write-host "Problem accessing queue"
     $_.Exception.message
     Get-PSSession -Name EXCH -ErrorAction SilentlyContinue | Remove-PSSession
     exit 3
 
-}
+}#Catch
 
 #Remove Session now that we got the info we want
 Get-PSSession -Name EXCH -ErrorAction SilentlyContinue | Remove-PSSession
@@ -88,19 +88,23 @@ If (-not $OldMSGCheck) {
     #"No old messages found, reporting an OK status"
     Write-Output "OK: All Queues have no messages older than $(get-date $WarningDate -format G)"
     Exit 0
-}
-Elseif ($OldMSGCheck| Where DateReceived -lt $CriticalDate) {
+}#If (-not $OldMSGCheck)
+Elseif ($OldMSGCheck | Where DateReceived -lt $CriticalDate) {
     #Messages found older then the Warning Date but less then the Critical Date
-    Write-Output "WARNING: $($Queue.count) messages older than $(get-date $WarningDate -format G)"
+    Write-Output "WARNING: $($OldMSGCheck.count) messages older than $(get-date $WarningDate -format G)"
+    $OldMSGCheck |
+        Select-Object OriginalFromAddress, Subject, DeferReason, MessageSourceName, Identity
     Exit 1
-}
-Elseif ($OldMSGCheck| Where DateReceived -ge $CriticalDate) {
+}#Elseif ($OldMSGCheck | Where DateReceived -lt $CriticalDate)
+Elseif ($OldMSGCheck | Where DateReceived -ge $CriticalDate) {
     #Messages found older than or equal to the Critical Date
-   Write-Output "CRITICAL: $($Queue.count) messages older than $(get-date $CriticalDate -format G)"
+    Write-Output "CRITICAL: $($OldMSGCheck.count) messages older than $(get-date $CriticalDate -format G)"
+    $OldMSGCheck |
+        Select-Object OriginalFromAddress, Subject, DeferReason, MessageSourceName, Identity
     Exit 2
-}
+}#Elseif ($OldMSGCheck | Where DateReceived -ge $CriticalDate) 
 Else {
     #Shouldn't happen but catch it just to be safe
     Write-Output "UNKNOWN: Issue checking queues"
     Exit 3
-}
+}#Else
