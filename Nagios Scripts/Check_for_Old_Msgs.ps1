@@ -89,14 +89,15 @@ If (-not $OldMSGCheck) {
     Write-Output "OK: All Queues have no messages older than $(get-date $WarningDate -format G)"
     Exit 0
 }#If (-not $OldMSGCheck)
-Elseif ($OldMSGCheck | Where DateReceived -lt $CriticalDate) {
+Elseif ($OldMSGCheck | Where DateReceived -gt $CriticalDate) {
     #Messages found older then the Warning Date but less then the Critical Date
+    #Since we already searched for messages older then the warning date, we just need to see if they are gt then the critical date
     Write-Output "WARNING: $($OldMSGCheck.count) messages older than $(get-date $WarningDate -format G)"
     $OldMSGCheck |
         Select-Object OriginalFromAddress, Subject, DeferReason, MessageSourceName, Identity
     Exit 1
 }#Elseif ($OldMSGCheck | Where DateReceived -lt $CriticalDate)
-Elseif ($OldMSGCheck | Where DateReceived -ge $CriticalDate) {
+Elseif ($OldMSGCheck | Where DateReceived -le $CriticalDate) {
     #Messages found older than or equal to the Critical Date
     Write-Output "CRITICAL: $($OldMSGCheck.count) messages older than $(get-date $CriticalDate -format G)"
     $OldMSGCheck |
