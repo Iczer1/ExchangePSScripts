@@ -168,12 +168,13 @@ if ($ExServer.IsMailboxServer -eq $true) {
         $databases | 
             foreach-object {
             $DBState = ""
-            if (($_.Status -eq 'Healthy' -or $_.Status -eq 'Mounted') -and $_.ContentIndexState -eq 'Healthy') {
+            #TODO Change this so the content index only alerts when the status is Failed, Failedandsuspended, or Unknown
+            if (($_.Status -eq 'Healthy' -or $_.Status -eq 'Mounted') -and ($_.ContentIndexState -eq 'Healthy' -or $_.ContentIndexState -eq 'Crawling')) {
                 $numHealthyDatabase++
             }#if (($_.Status -eq 'Healthy' -or $_.Status -eq 'Mounted') -and $_.ContentIndexState -eq 'Healthy')
             Else {
                 [String]$DBState
-                If ($_.ContentIndexState -ne 'Healthy') {$DBState += 'Content Index not Healthy,'}
+                If ($_.ContentIndexState -ne 'Healthy') {$DBState += "Content Index not Healthy $($_.ContentIndexState),"}
                 if ($_.Status -ne 'Healthy' -and $_.Status -ne 'Mounted') {$DBState += 'DB not Healthy'}
                 $DBState = $DBState.trim(",")
                 $tmp += $_.databasename + " $DBState`n"
